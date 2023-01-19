@@ -11,13 +11,23 @@ object ZContainerOps extends ZIOAppDefault {
 
 
 //  val myApp: ZIO[Any, IOException, Unit] = Console.printLine("Hello, World!")
-  val myApp: ZIO[Any, Throwable, Unit] = for{
+ /* val myApp: ZIO[Any, Throwable, Unit] = for{
     dc <- DockerOps.buildClient
     cont <- DockerOps.makeContainer("cont:0.1")(dc)
     _ <- Console.printLine(cont)
     _ <- DockerOps.killContainer(cont)(dc)
     _ <- DockerOps.closeClient(dc)
-  } yield ()
+  } yield ()*/
+ val myApp: ZIO[Any, Throwable, Unit] = ZIO.scoped {
+   for {
+     dc <- DockerOps.client
+     cont <- DockerOps.container("cont:0.1")
+     _ <- Console.printLine("")
+     //_ <- DockerOps.killContainer(cont)(dc)
+   } yield ()
+ }
+
+
   def run = myApp
 
 
