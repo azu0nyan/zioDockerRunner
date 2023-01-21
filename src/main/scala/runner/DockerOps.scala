@@ -1,12 +1,13 @@
 package runner
 
+import com.github.dockerjava.api
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.core.DockerClientBuilder
 import com.github.dockerjava.netty.NettyDockerCmdExecFactory
 import zio.*
 
 object DockerOps {
-  type ContainerRef = String
+  type Container = String
 
   def buildClient: Task[DockerClient] = ZIO.attempt {
     println("Client open")
@@ -23,15 +24,9 @@ object DockerOps {
   def client: ZIO[Scope, Throwable, DockerClient] =
     ZIO.acquireRelease(buildClient)(closeClient)
 
-  //  def makeContainer(containerName: String)(dc: DockerClient): Task[ContainerRef] = ZIO.attempt {
-  //    val createContainerCmd = dc.createContainerCmd(containerName).withTty(true)
-  //    val createContainerResponse = createContainerCmd.exec()
-  //    val container = createContainerResponse.getId
-  //    dc.startContainerCmd(container).exec()
-  //    container
-  //  }
-
-  def makeContainer(containerName: String): ZIO[DockerClient, Throwable, ContainerRef] =
+  def clientLayer: ZLayer[Any, Throwable, DockerClient] =
+    ZLayer.scoped(client)
+  def makeContainer(containerName: String): ZIO[DockerClient, Throwable, Container] =
     for {
       dc <- ZIO.service[DockerClient]
     } yield {
@@ -43,24 +38,27 @@ object DockerOps {
       container
     }
 
-  def killContainer(container: ContainerRef)(dc: DockerClient): ZIO[DockerClient, Nothing, Unit] = ZIO.attempt {
-    println("cont stop")
-    dc.killContainerCmd(container).exec()
-    ()
-  }.catchAll(t => ZIO.logErrorCause("Exception when killing container", Cause.fail(t)))
+
+  def killContainer(container: Container) : ZIO[DockerClient, Nothing, Any] =
+    ZIO.service[DockerClient].flatMap{ dc =>
+      ZIO.attempt {
+        println("cont stop")
+        dc.killContainerCmd(container).exec()
+      }.catchAll(t => ZIO.logErrorCause("Exception when killing container", Cause.fail(t)))
+    }
+
+  def container(containerName: String): ZIO[DockerClient & Scope, Throwable, Container] =
+    ZIO.acquireRelease(makeContainer(containerName))(killContainer)
+
+  def containerLayer(containerName: String): ZLayer[DockerClient, Throwable, Container] =
+    ZLayer.scoped(container(containerName))
 
 
-  def container(containerName: String): ZIO[DockerClient & Scope, Throwable, ContainerRef] =
-    for {
-      cont <- makeContainer(containerName)
-    } yield (cont)
+  def doInContainer[R, E, A](containerName: String)(program: ZIO[DockerClient & Container & R, E, A]): ZIO[DockerClient & R, E | Throwable, A] =
+    ZIO.scoped {
+      container(containerName).flatMap(c => program.provideSomeLayer(ZLayer.succeed(c)))
+    }
 
 
-//  def containerLayer(containerName: String): ZLayer[DockerClient, Throwable, ContainerRef] =
-//    ZLayer.scoped {
-//      ZIO.acquireRelease(makeContainer(containerName))(killContainer())
-//    }
 
-  //  def containerLayer(containerName: String): ZLayer[DockerClient, Throwable, ContainerRef] =
-  //    ZLayer.fromZIO(makeContainer(containerName))
 }
