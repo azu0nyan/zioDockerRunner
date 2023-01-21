@@ -23,7 +23,6 @@ object CompressOps {
 
     tarOut.finish()
 
-    res.toInputStream
-    //new ByteArrayInputStream(res.toByteArray)
+    res.toInputStream    
   }
 }

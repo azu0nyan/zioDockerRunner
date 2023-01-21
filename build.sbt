@@ -16,3 +16,11 @@ libraryDependencies ++= Seq(
   "org.apache.commons" % "commons-compress" % "1.22",
   "com.github.docker-java" % "docker-java" % "3.2.14",
 )
+
+//Testing
+libraryDependencies ++= Seq(
+  "dev.zio" %% "zio-test"          % "2.0.5" % Test,
+  "dev.zio" %% "zio-test-sbt"      % "2.0.5" % Test,
+  "dev.zio" %% "zio-test-magnolia" % "2.0.5" % Test
+)
+testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
