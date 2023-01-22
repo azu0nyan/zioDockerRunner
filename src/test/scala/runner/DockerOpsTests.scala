@@ -28,7 +28,7 @@ object DockerOpsTests extends ZIOSpecDefault {
         res3 <- DockerOps.executeCommandInContainer(ExecuteCommandParams(failedCommand, None))
       } yield (res, res2, res3)
 
-      val res = for (r <- DockerOps.doInContainer(testContainerName)(toRunInContainer).provideLayer(DockerOps.clientLayer)) yield r
+      val res = for (r <- DockerOps.doInContainer(testContainerName)(toRunInContainer).provideLayer(DockerOps.clientLayerScooped)) yield r
 
       assertZIO(res)(
         hasField("firstResult", (x: (ExecuteCommandResult, ExecuteCommandResult, ExecuteCommandResult)) => x._1, equalTo(ExecuteCommandResult(Some(0), "", ""))) &&

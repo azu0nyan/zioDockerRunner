@@ -17,6 +17,11 @@ libraryDependencies ++= Seq(
   "com.github.docker-java" % "docker-java" % "3.2.14",
 )
 
+//libraryDependencies ++= Seq(
+//  "dev.zio" %% "zio-core"    % "2.0.5" % Test,
+//  "dev.zio" %% "zio-streams" % "2.0.5" % Test
+//)
+
 //Testing
 libraryDependencies ++= Seq(
   "dev.zio" %% "zio-test"          % "2.0.5" % Test,
