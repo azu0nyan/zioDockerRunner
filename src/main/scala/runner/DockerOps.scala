@@ -11,7 +11,9 @@ import zio.*
 import java.io.InputStream
 
 object DockerOps {
-  type Container = String
+  case class Container(id: String)
+
+  type DockerClientContext = DockerClient & Container
 
   def buildClient: Task[DockerClient] = ZIO.attempt {
 
@@ -43,10 +45,10 @@ object DockerOps {
 
       val createContainerCmd = dc.createContainerCmd(containerName).withTty(true)
       val createContainerResponse = createContainerCmd.exec()
-      val container = createContainerResponse.getId
-      dc.startContainerCmd(container).exec()
-      println(s"cont start $container")
-      container
+      val containerID = createContainerResponse.getId
+      dc.startContainerCmd(containerID).exec()
+      println(s"cont start $containerID")
+      Container(containerID)
     }
 
 
@@ -54,7 +56,7 @@ object DockerOps {
     ZIO.service[DockerClient].flatMap { dc =>
       ZIO.attempt {
         println(s"cont stop $container")
-        dc.killContainerCmd(container).exec()
+        dc.killContainerCmd(container.id).exec()
       }.catchAll(t => ZIO.logErrorCause("Exception when killing container", Cause.fail(t)))
     }
 
@@ -67,18 +69,19 @@ object DockerOps {
   def containerLayer(containerName: String): ZLayer[DockerClient & Scope, Throwable, Container] =
     ZLayer.fromZIO(container(containerName))
 
-  def doInContainer[R, E, A](containerName: String)(program: ZIO[DockerClient & Container & R, E, A]): ZIO[DockerClient & R, E | Throwable, A] =
+
+  def doInContainer[R, E, A](containerName: String)(program: ZIO[DockerClientContext & R, E, A]): ZIO[DockerClient & R, E | Throwable, A] =
     ZIO.scoped {
       container(containerName).flatMap(c => program.provideSomeLayer(ZLayer.succeed(c)))
     }
 
   case class CopyArchiveToContainerParams(path: String = "/", tarStream: InputStream)
-  def copyArchiveToContainer(params: CopyArchiveToContainerParams): ZIO[DockerClient & Container, Throwable, Unit] =
+  def copyArchiveToContainer(params: CopyArchiveToContainerParams): ZIO[DockerClientContext, Throwable, Unit] =
     for {
       dc <- ZIO.service[DockerClient]
       c <- ZIO.service[Container]
       _ <- ZIO.attempt {
-        dc.copyArchiveToContainerCmd(c)
+        dc.copyArchiveToContainerCmd(c.id)
           .withRemotePath(params.path)
           .withTarInputStream(params.tarStream)
           .exec()
@@ -88,7 +91,7 @@ object DockerOps {
 
   case class ExecuteCommandResult(exitCode: Option[Long], stdOut: String, stdErr: String)
   case class ExecuteCommandParams(cmd: Seq[String], input: Option[InputStream] = None)
-  def executeCommandInContainer(params: ExecuteCommandParams): ZIO[DockerClient & Container, Throwable, ExecuteCommandResult] =
+  def executeCommandInContainer(params: ExecuteCommandParams): ZIO[DockerClientContext, Throwable, ExecuteCommandResult] =
     for {
       dc <- ZIO.service[DockerClient]
       c <- ZIO.service[Container]
@@ -102,7 +105,7 @@ object DockerOps {
   def executeCommandInContainer(dc: DockerClient, c: Container, params: ExecuteCommandParams): ExecuteCommandResult = {
     println(s"Executing ${params.cmd}")
 
-    val command = dc.execCreateCmd(c)
+    val command = dc.execCreateCmd(c.id)
       .withCmd(params.cmd: _ *)
       .withAttachStdin(true)
       .withAttachStderr(true)
