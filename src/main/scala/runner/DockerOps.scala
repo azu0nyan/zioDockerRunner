@@ -13,7 +13,7 @@ import java.io.InputStream
 object DockerOps {
   case class Container(id: String)
 
-  type DockerClientContext = DockerClient & Container
+  case class DockerClientContext(client: DockerClient, container: Container)
 
   def buildClient: Task[DockerClient] = ZIO.attempt {
 
@@ -52,6 +52,7 @@ object DockerOps {
     }
 
 
+
   def killContainer(container: Container): ZIO[DockerClient, Nothing, Any] =
     ZIO.service[DockerClient].flatMap { dc =>
       ZIO.attempt {
@@ -70,18 +71,35 @@ object DockerOps {
     ZLayer.fromZIO(container(containerName))
 
 
-  def doInContainer[R, E, A](containerName: String)(program: ZIO[DockerClientContext & R, E, A]): ZIO[DockerClient & R, E | Throwable, A] =
+  def dockerClientContext(containerName: String): ZIO[Scope, Throwable, DockerClientContext] =
+      for {
+        cl <- client
+        cont <- container(containerName).provideSomeLayer(ZLayer.succeed(cl))
+      } yield DockerClientContext(cl, cont)
+
+  def dockerClientContextScoped(containerName: String): ZLayer[Any, Throwable,  DockerClientContext] =
+    ZLayer.scoped(dockerClientContext(containerName))
+
+  def doInContainer[R: Tag, E: Tag, A: Tag](containerName: String)
+                                           (program: ZIO[DockerClientContext & R, E, A]): ZIO[DockerClient & R, E | Throwable, A] =
     ZIO.scoped {
-      container(containerName).flatMap(c => program.provideSomeLayer(ZLayer.succeed(c)))
+      for {
+        cl <- ZIO.service[DockerClient]
+        cont <- container(containerName)
+        res <- program.provideSomeLayer(ZLayer.succeed(DockerClientContext(cl, cont)))
+      } yield res
     }
+
+  //    ZIO.scoped {
+  //      container(containerName).flatMap(c => program.provideSomeLayer(ZLayer.succeed(c)))
+  //    }
 
   case class CopyArchiveToContainerParams(path: String = "/", tarStream: InputStream)
   def copyArchiveToContainer(params: CopyArchiveToContainerParams): ZIO[DockerClientContext, Throwable, Unit] =
     for {
-      dc <- ZIO.service[DockerClient]
-      c <- ZIO.service[Container]
+      context <- ZIO.service[DockerClientContext]
       _ <- ZIO.attempt {
-        dc.copyArchiveToContainerCmd(c.id)
+        context.client.copyArchiveToContainerCmd(context.container.id)
           .withRemotePath(params.path)
           .withTarInputStream(params.tarStream)
           .exec()
@@ -93,19 +111,18 @@ object DockerOps {
   case class ExecuteCommandParams(cmd: Seq[String], input: Option[InputStream] = None)
   def executeCommandInContainer(params: ExecuteCommandParams): ZIO[DockerClientContext, Throwable, ExecuteCommandResult] =
     for {
-      dc <- ZIO.service[DockerClient]
-      c <- ZIO.service[Container]
-      res <- ZIO.attempt(executeCommandInContainer(dc, c, params))
+      context <- ZIO.service[DockerClientContext]
+      res <- ZIO.attempt(executeCommandInContainer(context, params))
     } yield res
 
   //  .catchAll(t =>
   //    ZIO.logErrorCause("Exception when executing command in container client", Cause.fail(t))
   //  )
 
-  def executeCommandInContainer(dc: DockerClient, c: Container, params: ExecuteCommandParams): ExecuteCommandResult = {
+  def executeCommandInContainer(context: DockerClientContext, params: ExecuteCommandParams): ExecuteCommandResult = {
     println(s"Executing ${params.cmd}")
 
-    val command = dc.execCreateCmd(c.id)
+    val command = context.client.execCreateCmd(context.container.id)
       .withCmd(params.cmd: _ *)
       .withAttachStdin(true)
       .withAttachStderr(true)
@@ -115,7 +132,7 @@ object DockerOps {
     val out = new StringBuilder()
     val err = new StringBuilder()
 
-    val execution = dc.execStartCmd(command.getId)
+    val execution = context.client.execStartCmd(command.getId)
       .withStdIn(params.input.orNull)
       .exec(new ResultCallbackTemplate {
         override def onNext(f: Frame): Unit = {
@@ -131,7 +148,7 @@ object DockerOps {
 
     execution.awaitCompletion()
 
-    val retCode = dc.inspectExecCmd(command.getId).exec().getExitCodeLong
+    val retCode = context.client.inspectExecCmd(command.getId).exec().getExitCodeLong
 
     val res = ExecuteCommandResult(Option(retCode), out.toString(), err.toString())
     println(res)

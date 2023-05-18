@@ -13,14 +13,14 @@ object Runner {
                                     runs: Seq[SingleRun],
                                     limitations: HardwareLimitations)
 
-  def compileJava: ZIO[DockerClientContext & ProgramSource, CompilationFailure, CompilationSuccess[ProgrammingLanguage.Java.type]] =
+  def compileJava(source: ProgramSource): ZIO[DockerClientContext, CompilationFailure, CompilationSuccess[ProgrammingLanguage.Java.type]] =
     for {
       context <- ZIO.service[DockerClientContext]
-      source <- ZIO.service[ProgramSource]
       tarStream <- ZIO.succeed(CompressOps.asTarStream(source.src, "Main.java"))
-      _ <- DockerOps.copyArchiveToContainer(CopyArchiveToContainerParams("/", tarStream)).mapError(_ => RemoteWorkerError("Cant copy archive to container"))
-      res <- DockerOps.executeCommandInContainer(ExecuteCommandParams(Seq("javac", "Main.java"), None)).mapError(_ => RemoteWorkerError("Cant copy archive to container"))
-    } yield ZIO.fail(CompilationError(""))
+      _ <- DockerOps.copyArchiveToContainer(CopyArchiveToContainerParams("/", tarStream)).mapError(_ => RemoteWorkerError(Some("Cant copy archive to container")))
+      res <- DockerOps.executeCommandInContainer(ExecuteCommandParams(Seq("javac", "Main.java"), None)).mapError(_ => RemoteWorkerError(Some("Cant copy archive to container")))
+      _ <- if(!res.exitCode.contains(1)) ZIO.fail(CompilationError(res.stdOut)) else ZIO.succeed(JavaCompilationSuccess("", ""))
+    } yield JavaCompilationSuccess("", "")//ZIO.fail(CompilationError(""))
 
 
 
