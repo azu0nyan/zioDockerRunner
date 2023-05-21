@@ -13,6 +13,7 @@ import zio.test.Assertion.*
 import zio.test.TestAspect.*
 
 import java.io.ByteArrayInputStream
+import java.util.concurrent.TimeUnit
 import scala.io.Source
 
 
@@ -27,7 +28,7 @@ object JavaRunnerTests extends ZIOSpecDefault{
     runProgramRuntimeError,
     runTimeLimitExceeded,
     runLongRunning
-  ).provideLayer(DockerOps.dockerClientContextScoped(testContainerName)) @@ timeout(10.seconds)
+  ).provideLayer(DockerOps.dockerClientContextScoped(testContainerName)) @@ timeout(10.seconds) @@ withLiveClock
 
   val compileProgram = test("Compiling java program with Runner") {
     val javaFileText = Source.fromResource("java/WithMainClass.java").mkString("")
@@ -94,6 +95,7 @@ object JavaRunnerTests extends ZIOSpecDefault{
       exit <- JavaRunner.runCompiled(cs, "", 5000).exit
     } yield assert(exit)(succeeds(isSubtype[Success](hasField("timeMs", _.timeMs, isGreaterThan(1000L) && isLessThan(5000L)))))
   }
+
 
 
 
