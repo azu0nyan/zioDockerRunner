@@ -25,7 +25,7 @@ object CompileResult {
   final case class RemoteWorkerCreationError() extends CompilationFailure
   final case class RemoteWorkerError(errorMessage: Option[String] = None) extends CompilationFailure
 
-  final case class JavaCompilationSuccess(path: String, classname: String) extends CompilationSuccess[ProgrammingLanguage.Java.type]
+  final case class JavaCompilationSuccess(className: String) extends CompilationSuccess[ProgrammingLanguage.Java.type]
   final case class CppCompilationSuccess(path: String, filename: String) extends CompilationSuccess[ProgrammingLanguage.Cpp.type]
   final case class HaskellCompilationSuccess(path: String, filename: String) extends CompilationSuccess[ProgrammingLanguage.Haskell.type]
   final case class ScalaCompilationSuccess(path: String, classname: String) extends CompilationSuccess[ProgrammingLanguage.Scala.type]
