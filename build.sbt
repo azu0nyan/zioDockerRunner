@@ -8,9 +8,10 @@ lazy val root = (project in file("."))
   )
 
 
+val zioVersion = "2.0.13"
 libraryDependencies ++= Seq(
-  "dev.zio" %% "zio" % "2.0.5",
-  "dev.zio" %% "zio-streams" % "2.0.5",
+  "dev.zio" %% "zio" % zioVersion,
+  "dev.zio" %% "zio-streams" % zioVersion,
 //  "dev.zio" %% "zio-logging" % "2.1.3",
 //  "dev.zio" %% "zio-process" % "0.7.1",
   "org.apache.commons" % "commons-compress" % "1.22",
@@ -24,8 +25,8 @@ libraryDependencies ++= Seq(
 
 //Testing
 libraryDependencies ++= Seq(
-  "dev.zio" %% "zio-test"          % "2.0.5" % Test,
-  "dev.zio" %% "zio-test-sbt"      % "2.0.5" % Test,
-  "dev.zio" %% "zio-test-magnolia" % "2.0.5" % Test
+  "dev.zio" %% "zio-test"          % zioVersion % Test,
+  "dev.zio" %% "zio-test-sbt"      % zioVersion % Test,
+  "dev.zio" %% "zio-test-magnolia" % zioVersion % Test
 )
 testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")

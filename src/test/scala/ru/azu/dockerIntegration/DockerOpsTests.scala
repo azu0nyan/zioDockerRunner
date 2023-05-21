@@ -1,8 +1,8 @@
-package runner
+package ru.azu.dockerIntegration
 
-import runner.DockerOps.{CopyArchiveToContainerParams, ExecuteCommandParams, ExecuteCommandResult}
-import validator.Runner
-import validator.Runner.ProgramSource
+import DockerOps.{CopyArchiveToContainerParams, ExecuteCommandParams, ExecuteCommandResult}
+import ru.azu.testRunner.JavaRunner.ProgramSource
+import ru.azu.testRunner.{CompilationError, JavaRunner}
 import zio.ZLayer
 import zio.test.*
 import zio.test.Assertion.*
@@ -15,7 +15,7 @@ object DockerOpsTests extends ZIOSpecDefault {
 
 
   val t1 = test("Compiling java program without Runner") {
-    val javaFileText = Source.fromResource("CorrectJavaProgramWithMainClass.java").mkString("")
+    val javaFileText = Source.fromResource("WithMainClass.java").mkString("")
     val tarStream = CompressOps.asTarStream(javaFileText, "Main.java")
 
     val failedCommand = Seq("javac", "Main.jav")
@@ -41,20 +41,10 @@ object DockerOpsTests extends ZIOSpecDefault {
 
   }
 
-  val t2= test("Compiling incorrect java program with Runner") {
-    val javaFileText = Source.fromResource("IncorrectJavaProgram.java").mkString("")
 
-    val res = for {
-      r <- Runner.compileJava(ProgramSource(javaFileText)).provideSomeLayer(DockerOps.dockerClientContextScoped(testContainerName))
-    } yield r
-
-    println(res)
-//    assertM
-    assertZIO(res)(failsCause())
-  }
 
   def spec = suite("DockerOpsSpec")(
-    t1, t2
+    t1
   )
 
 

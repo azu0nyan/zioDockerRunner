@@ -1,5 +1,4 @@
-package validator
-
+package ru.azu.testRunner
 
 sealed trait RunVerificationResult
 case class RunVerificationSuccess(message: Option[String]) extends RunVerificationResult
@@ -24,7 +23,7 @@ case class RemoteWorkerConnectionError() extends CompilationFailure
 case class RemoteWorkerCreationError() extends CompilationFailure
 case class RemoteWorkerError(errorMessage: Option[String] = None) extends CompilationFailure
 
-case class JavaCompilationSuccess(path: String, classname: String) extends CompilationSuccess[ProgrammingLanguage.Java.type]
+final case class JavaCompilationSuccess(path: String, classname: String) extends CompilationSuccess[ProgrammingLanguage.Java.type]
 case class CppCompilationSuccess(path: String, filename: String) extends CompilationSuccess[ProgrammingLanguage.Cpp.type]
 case class HaskellCompilationSuccess(path: String, filename: String) extends CompilationSuccess[ProgrammingLanguage.Haskell.type]
 case class ScalaCompilationSuccess(path: String, classname: String) extends CompilationSuccess[ProgrammingLanguage.Scala.type]

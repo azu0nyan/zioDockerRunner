@@ -1,4 +1,4 @@
-package runner
+package ru.azu.dockerIntegration
 
 import com.github.dockerjava.api
 import com.github.dockerjava.api.DockerClient

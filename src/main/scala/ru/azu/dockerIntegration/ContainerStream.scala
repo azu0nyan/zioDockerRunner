@@ -1,7 +1,7 @@
-package runner
+package ru.azu.dockerIntegration
 
 import com.github.dockerjava.api.DockerClient
-import runner.DockerOps.Container
+import DockerOps.Container
 import zio.*
 import zio.Console.printLine
 import zio.stream.{ZSink, ZStream}
