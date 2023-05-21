@@ -1,4 +1,14 @@
-package ru.azu.testRunner
+package zioDockerRunner.testRunner
+
+type CompileAndRunMultipleResult = CompilationFailure | MultipleRunsResultScore
+
+case class ProgramSource(src: String)
+case class CompileAndRunMultiple(
+                                  programCode: ProgramSource,
+                                  language: ProgrammingLanguage,
+                                  runs: Seq[SingleRun],
+                                  limitations: HardwareLimitations)
+
 
 sealed trait RunVerificationResult
 object RunVerificationResult {
@@ -20,9 +30,9 @@ sealed trait CompilationFailure extends CompileResult
 
 object CompileResult {
   final case class CompilationError(errorMessage: String) extends CompilationFailure
-  final case class CompilationServerError(errorMessage: Option[String]) extends CompilationFailure
-  final case class RemoteWorkerConnectionError() extends CompilationFailure
-  final case class RemoteWorkerCreationError() extends CompilationFailure
+//  final case class CompilationServerError(errorMessage: Option[String]) extends CompilationFailure
+//  final case class RemoteWorkerConnectionError() extends CompilationFailure
+//  final case class RemoteWorkerCreationError() extends CompilationFailure
   final case class RemoteWorkerError(errorMessage: Option[String] = None) extends CompilationFailure
 
   final case class JavaCompilationSuccess(className: String) extends CompilationSuccess[ProgrammingLanguage.Java.type]

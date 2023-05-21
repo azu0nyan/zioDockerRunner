@@ -1,4 +1,4 @@
-package ru.azu.dockerIntegration
+package zioDockerRunner.dockerIntegration
 
 import org.apache.commons.compress.archivers.tar.{TarArchiveEntry, TarArchiveOutputStream}
 import org.apache.commons.io.output.ByteArrayOutputStream

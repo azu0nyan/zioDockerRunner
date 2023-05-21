@@ -1,11 +1,10 @@
-package ru.azu.dockerIntegration
+package zioDockerRunner.dockerIntegration
 
 import DockerOps.{CopyArchiveToContainerParams, ExecuteCommandParams, ExecuteCommandResult}
-import ru.azu.testRunner.JavaRunner.ProgramSource
-import ru.azu.testRunner.{CompilationError, JavaRunner}
 import zio.ZLayer
 import zio.test.*
 import zio.test.Assertion.*
+import zioDockerRunner.testRunner.JavaRunner
 
 import java.io.ByteArrayInputStream
 import scala.io.Source

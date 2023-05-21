@@ -1,23 +1,17 @@
-package ru.azu.testRunner
+package zioDockerRunner.testRunner
 
-import ru.azu.dockerIntegration.{CompressOps, DockerOps}
-import ru.azu.dockerIntegration.DockerOps.{CopyArchiveToContainerParams, DockerClientContext, ExecuteCommandParams}
-import ru.azu.testRunner.CompileResult.{CompilationError, JavaCompilationSuccess, RemoteWorkerError}
-import ru.azu.testRunner.RunResult.{RuntimeError, Success, TimeLimitExceeded, UnknownRunError}
+import zioDockerRunner.dockerIntegration.DockerOps.{CopyArchiveToContainerParams, DockerClientContext, ExecuteCommandParams}
+import CompileResult.{CompilationError, JavaCompilationSuccess, RemoteWorkerError}
+import RunResult.{RuntimeError, Success, TimeLimitExceeded, UnknownRunError}
 import zio.*
 import zio.Console.printLine
+import zioDockerRunner.dockerIntegration.{CompressOps, DockerOps}
 
 import java.util.concurrent.TimeUnit
 import java.io.ByteArrayInputStream
 
-object JavaRunner {
-  case class ProgramSource(src: String)
-
-  case class CompileAndRunMultiple(
-                                    programCode: ProgramSource,
-                                    language: ProgrammingLanguage,
-                                    runs: Seq[SingleRun],
-                                    limitations: HardwareLimitations)
+object JavaRunner extends LanguageRunner [ProgrammingLanguage.Java.type]{
+  override type CompilationSuccessL = JavaCompilationSuccess
 
   def extractJavaMainClassName(src: String): Option[String] = {
     val regex = "public[\\s]+(final[\\s]+)?class[\\s]+([a-zA-Z_$][0-9a-zA-Z_$]*)".r
@@ -27,7 +21,7 @@ object JavaRunner {
     }
   }
 
-  def compileJava(source: ProgramSource): ZIO[DockerClientContext, CompilationFailure, JavaCompilationSuccess] =
+  def compile(source: ProgramSource): ZIO[DockerClientContext, CompilationFailure, JavaCompilationSuccess] =
     for {
       className <- ZIO.fromOption(extractJavaMainClassName(source.src)).mapError(_ => CompilationError("No public class with main found"))
       tarStream <- ZIO.succeed(CompressOps.asTarStream(source.src, s"$className.java"))
@@ -56,31 +50,5 @@ object JavaRunner {
     for(winner <- run.race(timeout)) yield winner
 
   }
-
-
-
-  /*
-    case class CompileAndRunMultiple(
-                                      programCode: ProgramSource,
-                                      language: ProgrammingLanguage,
-                                      runs: Seq[SingleRun],
-                                      limitations: HardwareLimitations)
-
-
-
-  */
-
-  //  type CompileAndRunMultipleResult = CompilationFailure | MultipleRunsResultScore
-  //
-  //  def compile[L <: ProgrammingLanguage: Tag]: ZIO[DockerClientContext, CompilationFailure, CompilationSuccess[L]] = ???
-  //
-  //  def compileAndRunMultiple: ZIO[DockerClientContext & CompileAndRunMultiple, Throwable, CompileAndRunMultipleResult] = ???
-
-  //    for {
-  //      dc <- ZIO.service[DockerClient]
-  //      c <- ZIO.service[Container]
-  //      res <- ZIO.attempt(executeCommandInContainer(dc, c, params))
-  //    } yield res
-
 
 }

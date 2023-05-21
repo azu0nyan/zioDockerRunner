@@ -1,4 +1,4 @@
-package ru.azu.dockerIntegration
+package zioDockerRunner.dockerIntegration
 
 import com.github.dockerjava.api.DockerClient
 import DockerOps.Container
