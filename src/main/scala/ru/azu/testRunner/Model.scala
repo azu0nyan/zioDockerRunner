@@ -1,9 +1,10 @@
 package ru.azu.testRunner
 
 sealed trait RunVerificationResult
-case class RunVerificationSuccess(message: Option[String]) extends RunVerificationResult
-case class RunVerificationWrongAnswer(message: Option[String]) extends RunVerificationResult
-
+object RunVerificationResult {
+  final case class RunVerificationSuccess(message: Option[String]) extends RunVerificationResult
+  final case class RunVerificationWrongAnswer(message: Option[String]) extends RunVerificationResult
+}
 /**
  * объект содержащий входные данные и необходимую информацию для верификации ответа
  */
@@ -17,31 +18,35 @@ sealed trait CompileResult
 sealed trait CompilationSuccess[LANGUAGE <: ProgrammingLanguage] extends CompileResult
 sealed trait CompilationFailure extends CompileResult
 
-case class CompilationError(errorMessage: String) extends CompilationFailure
-case class CompilationServerError(errorMessage: Option[String]) extends CompilationFailure
-case class RemoteWorkerConnectionError() extends CompilationFailure
-case class RemoteWorkerCreationError() extends CompilationFailure
-case class RemoteWorkerError(errorMessage: Option[String] = None) extends CompilationFailure
+object CompileResult {
+  final case class CompilationError(errorMessage: String) extends CompilationFailure
+  final case class CompilationServerError(errorMessage: Option[String]) extends CompilationFailure
+  final case class RemoteWorkerConnectionError() extends CompilationFailure
+  final case class RemoteWorkerCreationError() extends CompilationFailure
+  final case class RemoteWorkerError(errorMessage: Option[String] = None) extends CompilationFailure
 
-final case class JavaCompilationSuccess(path: String, classname: String) extends CompilationSuccess[ProgrammingLanguage.Java.type]
-case class CppCompilationSuccess(path: String, filename: String) extends CompilationSuccess[ProgrammingLanguage.Cpp.type]
-case class HaskellCompilationSuccess(path: String, filename: String) extends CompilationSuccess[ProgrammingLanguage.Haskell.type]
-case class ScalaCompilationSuccess(path: String, classname: String) extends CompilationSuccess[ProgrammingLanguage.Scala.type]
-
+  final case class JavaCompilationSuccess(path: String, classname: String) extends CompilationSuccess[ProgrammingLanguage.Java.type]
+  final case class CppCompilationSuccess(path: String, filename: String) extends CompilationSuccess[ProgrammingLanguage.Cpp.type]
+  final case class HaskellCompilationSuccess(path: String, filename: String) extends CompilationSuccess[ProgrammingLanguage.Haskell.type]
+  final case class ScalaCompilationSuccess(path: String, classname: String) extends CompilationSuccess[ProgrammingLanguage.Scala.type]
+}
 
 sealed trait RunResult
-case class Success(output: String, timeMs: Long) extends RunResult
-case class TimeLimitExceeded(timeMs: Long) extends RunResult
-case class RuntimeError(errorMessage: String) extends RunResult
-case class UnknownRunError(cause: String) extends RunResult
-
+object RunResult {
+  final case class Success(output: String, timeMs: Long) extends RunResult
+  final case class TimeLimitExceeded(timeMs: Long) extends RunResult
+  final case class RuntimeError(errorMessage: String) extends RunResult
+  final case class UnknownRunError(cause: String) extends RunResult
+}
 
 sealed trait ProgramRunResult
-case class ProgramRunResultSuccess(timeMS: Long, message: Option[String]) extends ProgramRunResult
-case class ProgramRunResultWrongAnswer(message: Option[String]) extends ProgramRunResult
-case class ProgramRunResultFailure(message: Option[String]) extends ProgramRunResult
-case class ProgramRunResultTimeLimitExceeded(timeMs: Long) extends ProgramRunResult
-case class ProgramRunResultNotTested() extends ProgramRunResult
+object ProgramRunResult {
+  final case class ProgramRunResultSuccess(timeMS: Long, message: Option[String]) extends ProgramRunResult
+  final case class ProgramRunResultWrongAnswer(message: Option[String]) extends ProgramRunResult
+  final case class ProgramRunResultFailure(message: Option[String]) extends ProgramRunResult
+  final case class ProgramRunResultTimeLimitExceeded(timeMs: Long) extends ProgramRunResult
+  final case class ProgramRunResultNotTested() extends ProgramRunResult
+}
 
 
 enum ProgrammingLanguage:

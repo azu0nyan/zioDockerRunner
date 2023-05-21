@@ -2,6 +2,7 @@ package ru.azu.testRunner
 
 import ru.azu.dockerIntegration.{CompressOps, DockerOps}
 import ru.azu.dockerIntegration.DockerOps.{CopyArchiveToContainerParams, DockerClientContext, ExecuteCommandParams}
+import ru.azu.testRunner.CompileResult.{CompilationError, JavaCompilationSuccess, RemoteWorkerError}
 import zio.*
 
 object JavaRunner {

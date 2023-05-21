@@ -2,9 +2,10 @@ package ru.azu.testRunner
 
 import ru.azu.dockerIntegration.DockerOps
 import ru.azu.dockerIntegration.DockerOps.{CopyArchiveToContainerParams, ExecuteCommandParams, ExecuteCommandResult}
+import ru.azu.testRunner.CompileResult.{CompilationError, JavaCompilationSuccess}
 import zio.test.ZIOSpecDefault
 import ru.azu.testRunner.JavaRunner.ProgramSource
-import ru.azu.testRunner.{CompilationError, JavaRunner}
+import ru.azu.testRunner.{ JavaRunner}
 import zio.ZLayer
 import zio.test.*
 import zio.test.Assertion.*
