@@ -10,7 +10,7 @@ import zioDockerRunner.dockerIntegration.{CompressOps, DockerOps}
 import java.util.concurrent.TimeUnit
 import java.io.ByteArrayInputStream
 
-object JavaRunner extends LanguageRunner [ProgrammingLanguage.Java.type]{
+given JavaRunner: LanguageRunner [ProgrammingLanguage.Java.type] with {
   override type CompilationSuccessL = JavaCompilationSuccess
 
   def extractJavaMainClassName(src: String): Option[String] = {
@@ -32,7 +32,7 @@ object JavaRunner extends LanguageRunner [ProgrammingLanguage.Java.type]{
         else ZIO.succeed(JavaCompilationSuccess(className))
     } yield r
 
-  def runCompiled(compilationSuccess: JavaCompilationSuccess, input: String, maxTime: Long): ZIO[DockerClientContext, Nothing, RunResult] = {
+  def runCompiled(compilationSuccess: JavaCompilationSuccess, input: String, maxTime: Long): ZIO[DockerClientContext, Nothing, RawRunResult] = {
     val inputStream = new ByteArrayInputStream(input.getBytes("UTF-8"))
     val runCommand = Seq("java", compilationSuccess.className)
 

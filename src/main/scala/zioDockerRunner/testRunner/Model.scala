@@ -1,5 +1,7 @@
 package zioDockerRunner.testRunner
 
+import zioDockerRunner.testRunner
+
 type CompileAndRunMultipleResult = CompilationFailure | MultipleRunsResultScore
 
 case class ProgramSource(src: String)
@@ -10,17 +12,13 @@ case class CompileAndRunMultiple(
                                   limitations: HardwareLimitations)
 
 
-sealed trait RunVerificationResult
-object RunVerificationResult {
-  final case class RunVerificationSuccess(message: Option[String]) extends RunVerificationResult
-  final case class RunVerificationWrongAnswer(message: Option[String]) extends RunVerificationResult
-}
+
 /**
  * объект содержащий входные данные и необходимую информацию для верификации ответа
  */
 trait SingleRun {
   val input: String
-  def validate(out: String, timeMs: Long): RunVerificationResult
+  def validate(out: String): RunVerificationResult
 }
 
 
@@ -41,29 +39,43 @@ object CompileResult {
   final case class ScalaCompilationSuccess(path: String, classname: String) extends CompilationSuccess[ProgrammingLanguage.Scala.type]
 }
 
-sealed trait RunResult
+/**Результат запуска и верефикации, видимый пользователю*/
+sealed trait UserRunResult
+
+/**Результат запуска в докере*/
+sealed trait RawRunResult
+
+
+
 object RunResult {
-  final case class Success(output: String, timeMs: Long) extends RunResult
-  final case class TimeLimitExceeded(timeMs: Long) extends RunResult
-  final case class RuntimeError(errorMessage: String) extends RunResult
-  final case class UnknownRunError(cause: String) extends RunResult
+  final case class Success(output: String, timeMs: Long) extends RawRunResult
+  
+  final case class RuntimeError(errorMessage: String) extends RawRunResult with UserRunResult
+  final case class UnknownRunError(cause: String) extends RawRunResult with UserRunResult
+  final case class TimeLimitExceeded(timeMs: Long) extends RawRunResult with UserRunResult
+  final case class MemoryLimitExceeded(memory: Memory) extends RawRunResult with UserRunResult
+
+  final case class CorrectAnswer(timeMS: Long, message: Option[String]) extends UserRunResult
+  final case class WrongAnswer(message: Option[String]) extends UserRunResult  
+  final case class NotTested(message: Option[String]) extends UserRunResult  
 }
 
-sealed trait ProgramRunResult
-object ProgramRunResult {
-  final case class ProgramRunResultSuccess(timeMS: Long, message: Option[String]) extends ProgramRunResult
-  final case class ProgramRunResultWrongAnswer(message: Option[String]) extends ProgramRunResult
-  final case class ProgramRunResultFailure(message: Option[String]) extends ProgramRunResult
-  final case class ProgramRunResultTimeLimitExceeded(timeMs: Long) extends ProgramRunResult
-  final case class ProgramRunResultNotTested() extends ProgramRunResult
+/**Результат проверки ответа */
+sealed trait RunVerificationResult
+object RunVerificationResult {
+  final case class RunVerificationSuccess(message: Option[String]) extends RunVerificationResult
+  final case class RunVerificationWrongAnswer(message: Option[String]) extends RunVerificationResult
 }
+
+
 
 
 enum ProgrammingLanguage:
   case  Java, Haskell, Scala,  Kojo, Cpp
 
-type HardwareLimitations = Unit
-type MultipleRunsResultScore = Seq[ProgramRunResult]
+type Memory = Long
+case class HardwareLimitations(memoryLimit: Memory = 128, timeLimitSeconds: Double = 2, cpuLimit: Double = 1)
+type MultipleRunsResultScore = Seq[UserRunResult]
 
 
 
