@@ -48,7 +48,7 @@ sealed trait RawRunResult
 
 
 object RunResult {
-  final case class Success(output: String, timeMs: Long) extends RawRunResult
+  final case class SuccessffulRun(output: String, timeMs: Long) extends RawRunResult
   
   final case class RuntimeError(errorMessage: String) extends RawRunResult with UserRunResult
   final case class UnknownRunError(cause: String) extends RawRunResult with UserRunResult

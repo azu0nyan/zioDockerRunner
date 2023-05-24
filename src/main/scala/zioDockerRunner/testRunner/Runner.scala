@@ -6,7 +6,7 @@ import zioDockerRunner.dockerIntegration.DockerOps.DockerClientContext
 
 object Runner {
 
-  def compileAndRunMultiple(compileAndRunMultiple: CompileAndRunMultiple) = {
+  def compileAndRunMultiple(compileAndRunMultiple: CompileAndRunMultiple): ZIO[DockerClientContext, Nothing, CompileAndRunMultipleResult] = {
     compileAndRunMultiple.language match
       case Java => JavaRunner.compileAndRunMultiple(compileAndRunMultiple)
       case Cpp => CppRunner.compileAndRunMultiple(compileAndRunMultiple)

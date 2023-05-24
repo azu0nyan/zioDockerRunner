@@ -3,14 +3,14 @@ package zioDockerRunner.testRunner
 import zioDockerRunner.dockerIntegration.DockerOps.{CopyArchiveToContainerParams, ExecuteCommandParams, ExecuteCommandResult}
 import CompileResult.{CompilationError, JavaCompilationSuccess}
 import zio.test.ZIOSpecDefault
-import RunResult.{RuntimeError, Success, TimeLimitExceeded}
+import RunResult.{RuntimeError, SuccessffulRun, TimeLimitExceeded}
 import zio.*
 import zio.test.*
 import zio.test.Assertion.*
 import zio.test.TestAspect.*
 import zioDockerRunner.dockerIntegration.DockerOps
 import zioDockerRunner.testRunner.CompileResult.CompilationError
-import zioDockerRunner.testRunner.RunResult.{RuntimeError, Success, TimeLimitExceeded}
+import zioDockerRunner.testRunner.RunResult.{RuntimeError, SuccessffulRun, TimeLimitExceeded}
 
 import java.io.ByteArrayInputStream
 import java.util.concurrent.TimeUnit
@@ -66,7 +66,7 @@ object JavaRunnerTests extends ZIOSpecDefault{
     for{
       cs <- JavaRunner.compile(ProgramSource(javaFileText))
       exit <- JavaRunner.runCompiled(cs, "2", 10_000).exit
-    } yield assert(exit)(succeeds(isSubtype[Success](hasField("output", _.output, equalTo("RESPONSE2\n")))))
+    } yield assert(exit)(succeeds(isSubtype[SuccessffulRun](hasField("output", _.output, equalTo("RESPONSE2\n")))))
   }
 
   val runProgramRuntimeError = test("Running program with runtime error ") {
@@ -93,7 +93,7 @@ object JavaRunnerTests extends ZIOSpecDefault{
     for {
       cs <- JavaRunner.compile(ProgramSource(javaFileText))
       exit <- JavaRunner.runCompiled(cs, "", 5000).exit
-    } yield assert(exit)(succeeds(isSubtype[Success](hasField("timeMs", _.timeMs, isGreaterThan(1000L) && isLessThan(5000L)))))
+    } yield assert(exit)(succeeds(isSubtype[SuccessffulRun](hasField("timeMs", _.timeMs, isGreaterThan(1000L) && isLessThan(5000L)))))
   }
 
 

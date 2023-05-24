@@ -2,7 +2,7 @@ package zioDockerRunner.testRunner
 
 import zioDockerRunner.dockerIntegration.DockerOps.{CopyArchiveToContainerParams, DockerClientContext, ExecuteCommandParams}
 import CompileResult.{CompilationError, JavaCompilationSuccess, RemoteWorkerError}
-import RunResult.{RuntimeError, Success, TimeLimitExceeded, UnknownRunError}
+import RunResult.{RuntimeError, SuccessffulRun, TimeLimitExceeded, UnknownRunError}
 import zio.*
 import zio.Console.printLine
 import zioDockerRunner.dockerIntegration.{CompressOps, DockerOps}
@@ -40,7 +40,7 @@ given JavaRunner: LanguageRunner [ProgrammingLanguage.Java.type] with {
       startTime <- Clock.currentTime(TimeUnit.MILLISECONDS).tap(l => printLine(l))
       runRes <- DockerOps.executeCommandInContainer(ExecuteCommandParams(runCommand, Some(inputStream))).disconnect
       endTime <- Clock.currentTime(TimeUnit.MILLISECONDS).tap(l => printLine(l))
-    } yield if (runRes.exitCode.contains(1)) RuntimeError(runRes.stdOut) else Success(runRes.stdOut, endTime - startTime))
+    } yield if (runRes.exitCode.contains(1)) RuntimeError(runRes.stdOut) else SuccessffulRun(runRes.stdOut, endTime - startTime))
       .catchAll(e => ZIO.succeed(UnknownRunError(e.toString)))
 
     val timeout = for{

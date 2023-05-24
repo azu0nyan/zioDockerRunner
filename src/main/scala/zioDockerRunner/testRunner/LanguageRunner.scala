@@ -17,14 +17,14 @@ trait LanguageRunner[L <: ProgrammingLanguage] {
       res <- runCompiled(compilationSuccess, s.input, maxTime)
     } yield res match
       case urr: UserRunResult => urr
-      case RunResult.Success(output, timeMs) =>
+      case RunResult.SuccessffulRun(output, timeMs) =>
         s.validate(output) match
           case RunVerificationSuccess(message) => CorrectAnswer(timeMs, message)
           case RunVerificationWrongAnswer(message) => WrongAnswer(message)
   }
 
   def runTestsInCompiled(crm: CompileAndRunMultiple, succ: CompilationSuccessL): ZIO[DockerClientContext, Nothing, MultipleRunsResultScore] = {
-    case class Acc(continue: Boolean = false, acc: Seq[UserRunResult] = Seq())
+    case class Acc(continue: Boolean = true, acc: Seq[UserRunResult] = Seq())
 
     ZIO.foldLeft(crm.runs)(Acc()) {
       case (Acc(true, acc), run) =>
@@ -32,7 +32,7 @@ trait LanguageRunner[L <: ProgrammingLanguage] {
           yield userRunRes match
             case ca: CorrectAnswer => Acc(true, acc :+ ca)
             case other => Acc(false, acc :+ other)
-      case (Acc(false, acc), run) => ZIO.succeed(Acc(false, acc :+ NotTested(None)))
+      case (Acc(false, acc), _) => ZIO.succeed(Acc(false, acc :+ NotTested(None)))
     }.map(_.acc)
   }
 
