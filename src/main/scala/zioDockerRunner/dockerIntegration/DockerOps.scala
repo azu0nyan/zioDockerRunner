@@ -18,7 +18,7 @@ object DockerOps {
   case object DockerFailure {
     final case class CantCreateClient(errorMessage: Option[String] = None) extends DockerFailure
     final case class CantCreateContainer(errorMessage: Option[String] = None) extends DockerFailure
-    
+
     final case class CantExecuteCommand(errorMessage: Option[String] = None) extends RunningContainerFailure
     final case class CantCopyToContainer(errorMessage: Option[String] = None) extends RunningContainerFailure
   }
@@ -27,7 +27,7 @@ object DockerOps {
   case class Container(id: String)
   case class DockerClientContext(client: DockerClient, container: Container)
 
-  def buildClient: Task[DockerClient] = ZIO.attempt {
+  def buildClient: Task[DockerClient] = ZIO.attemptBlocking {
 
     val res = DockerClientBuilder.getInstance
       .withDockerCmdExecFactory(new NettyDockerCmdExecFactory()
@@ -36,7 +36,7 @@ object DockerOps {
     res
   }
 
-  def closeClient(c: DockerClient): ZIO[Any, Nothing, Unit] = ZIO.attempt {
+  def closeClient(c: DockerClient): ZIO[Any, Nothing, Unit] = ZIO.attemptBlocking {
     println(s"Client close $c")
     c.close()
   }.catchAll(t => ZIO.logErrorCause("Exception when closing client", Cause.fail(t)))
@@ -67,7 +67,7 @@ object DockerOps {
 
   def killContainer(container: Container): ZIO[DockerClient, Nothing, Any] =
     ZIO.service[DockerClient].flatMap { dc =>
-      ZIO.attempt {
+      ZIO.attemptBlocking {
         println(s"cont stop $container")
         dc.killContainerCmd(container.id).exec()
       }.catchAll(t => ZIO.logErrorCause("Exception when killing container", Cause.fail(t)))
@@ -111,7 +111,7 @@ object DockerOps {
   def copyArchiveToContainer(params: CopyArchiveToContainerParams): ZIO[DockerClientContext, CantCopyToContainer, Unit] =
     (for {
       context <- ZIO.service[DockerClientContext]
-      _ <- ZIO.attempt {
+      _ <- ZIO.attemptBlocking {
         context.client.copyArchiveToContainerCmd(context.container.id)
           .withRemotePath(params.path)
           .withTarInputStream(params.tarStream)
@@ -125,7 +125,7 @@ object DockerOps {
   def executeCommandInContainer(params: ExecuteCommandParams): ZIO[DockerClientContext, CantExecuteCommand, ExecuteCommandResult] =
     (for {
       context <- ZIO.service[DockerClientContext]
-      res <- ZIO.attempt(executeCommandInContainer(context, params))
+      res <- ZIO.attemptBlocking(executeCommandInContainer(context, params))
     } yield res).mapError(t => CantExecuteCommand(Some(t.toString)))
 
   //  .catchAll(t =>

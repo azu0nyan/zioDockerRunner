@@ -44,6 +44,7 @@ trait LanguageRunner[L <: ProgrammingLanguage] {
 
     success.catchAll {
       case cf: CompilationFailure => ZIO.succeed(cf)
+      case rcf : RunningContainerFailure => ZIO.fail(rcf)
     }
   }
 
