@@ -5,7 +5,7 @@ import DockerOps.Container
 import zio.*
 import zio.Console.printLine
 import zio.stream.{ZSink, ZStream}
-
+/*
 
 object ContainerStream extends ZIOAppDefault {
 
@@ -38,3 +38,4 @@ object ContainerStream extends ZIOAppDefault {
   }
 
 }
+*/

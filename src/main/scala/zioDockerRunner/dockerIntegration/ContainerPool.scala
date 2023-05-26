@@ -2,6 +2,7 @@ package zioDockerRunner.dockerIntegration
 
 import com.github.dockerjava.api.DockerClient
 import zio.*
+/*
 object ContainerPool extends ZIOAppDefault {
 //  def makePool = ZPool.make(ZIO.succeed(2).tap(Console.printLine(_)), 10)
   def makePool: ZIO[Scope, Nothing, ZPool[Throwable, DockerClient]] = ZPool.make(DockerOps.client, 3)
@@ -19,3 +20,4 @@ object ContainerPool extends ZIOAppDefault {
 
 
 }
+*/

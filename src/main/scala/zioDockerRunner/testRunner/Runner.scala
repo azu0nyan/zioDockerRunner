@@ -3,10 +3,11 @@ package zioDockerRunner.testRunner
 import zio.*
 import ProgrammingLanguage.*
 import zioDockerRunner.dockerIntegration.DockerOps.DockerClientContext
+import zioDockerRunner.dockerIntegration.DockerOps.{DockerClientContext, RunningContainerFailure}
 
 object Runner {
 
-  def compileAndRunMultiple(compileAndRunMultiple: CompileAndRunMultiple): ZIO[DockerClientContext, Nothing, CompileAndRunMultipleResult] = {
+  def compileAndRunMultiple(compileAndRunMultiple: CompileAndRunMultiple): ZIO[DockerClientContext, RunningContainerFailure, CompileAndRunMultipleResult] = {
     compileAndRunMultiple.language match
       case Java => JavaRunner.compileAndRunMultiple(compileAndRunMultiple)
       case Cpp => CppRunner.compileAndRunMultiple(compileAndRunMultiple)

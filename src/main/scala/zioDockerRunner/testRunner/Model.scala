@@ -28,10 +28,6 @@ sealed trait CompilationFailure extends CompileResult
 
 object CompileResult {
   final case class CompilationError(errorMessage: String) extends CompilationFailure
-//  final case class CompilationServerError(errorMessage: Option[String]) extends CompilationFailure
-//  final case class RemoteWorkerConnectionError() extends CompilationFailure
-//  final case class RemoteWorkerCreationError() extends CompilationFailure
-  final case class RemoteWorkerError(errorMessage: Option[String] = None) extends CompilationFailure
 
   final case class JavaCompilationSuccess(className: String) extends CompilationSuccess[ProgrammingLanguage.Java.type]
   final case class CppCompilationSuccess(path: String, filename: String) extends CompilationSuccess[ProgrammingLanguage.Cpp.type]

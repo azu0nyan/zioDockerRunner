@@ -56,8 +56,7 @@ object RunnerTests extends ZIOSpecDefault {
   }
 
   val uncompillable = test("uncompillable") {
-    val javaFileText = Source.fromResource("java/UncompillableProgram.java").mkString("")
-    println(javaFileText)
+    val javaFileText = Source.fromResource("java/UncompillableProgram.java").mkString("")   
     val crm = CompileAndRunMultiple(
       ProgramSource(javaFileText),
       ProgrammingLanguage.Java,

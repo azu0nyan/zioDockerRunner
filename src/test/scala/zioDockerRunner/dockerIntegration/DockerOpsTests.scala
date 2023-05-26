@@ -14,7 +14,7 @@ object DockerOpsTests extends ZIOSpecDefault {
 
 
   val t1 = test("Compiling java program without Runner") {
-    val javaFileText = Source.fromResource("WithMainClass.java").mkString("")
+    val javaFileText = Source.fromResource("java/WithMainClass.java").mkString("")
     val tarStream = CompressOps.asTarStream(javaFileText, "Main.java")
 
     val failedCommand = Seq("javac", "Main.jav")

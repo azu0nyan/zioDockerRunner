@@ -7,12 +7,24 @@ import com.github.dockerjava.api.model.{Frame, StreamType}
 import com.github.dockerjava.core.DockerClientBuilder
 import com.github.dockerjava.netty.NettyDockerCmdExecFactory
 import zio.*
+import zioDockerRunner.dockerIntegration.DockerOps.DockerFailure.*
 
 import java.io.InputStream
 
 object DockerOps {
-  case class Container(id: String)
 
+  sealed trait DockerFailure
+  sealed trait RunningContainerFailure extends DockerFailure
+  case object DockerFailure {
+    final case class CantCreateClient(errorMessage: Option[String] = None) extends DockerFailure
+    final case class CantCreateContainer(errorMessage: Option[String] = None) extends DockerFailure
+    
+    final case class CantExecuteCommand(errorMessage: Option[String] = None) extends RunningContainerFailure
+    final case class CantCopyToContainer(errorMessage: Option[String] = None) extends RunningContainerFailure
+  }
+
+
+  case class Container(id: String)
   case class DockerClientContext(client: DockerClient, container: Container)
 
   def buildClient: Task[DockerClient] = ZIO.attempt {
@@ -29,13 +41,13 @@ object DockerOps {
     c.close()
   }.catchAll(t => ZIO.logErrorCause("Exception when closing client", Cause.fail(t)))
 
-  def client: ZIO[Scope, Throwable, DockerClient] =
-    ZIO.acquireRelease(buildClient)(closeClient)
+  def client: ZIO[Scope, CantCreateClient, DockerClient] =
+    ZIO.acquireRelease(buildClient)(closeClient).mapError(t => CantCreateClient(Some(t.toString)))
 
-  def clientLayer: ZLayer[Scope, Throwable, DockerClient] =
+  def clientLayer: ZLayer[Scope, CantCreateClient, DockerClient] =
     ZLayer.fromZIO(client)
 
-  def clientLayerScooped: ZLayer[Any, Throwable, DockerClient] =
+  def clientLayerScooped: ZLayer[Any, CantCreateClient, DockerClient] =
     ZLayer.scoped(client)
 
   def makeContainer(containerName: String): ZIO[DockerClient, Throwable, Container] =
@@ -61,27 +73,28 @@ object DockerOps {
       }.catchAll(t => ZIO.logErrorCause("Exception when killing container", Cause.fail(t)))
     }
 
-  def container(containerName: String): ZIO[DockerClient & Scope, Throwable, Container] =
-    ZIO.acquireRelease(makeContainer(containerName))(killContainer)
+  def container(containerName: String): ZIO[DockerClient & Scope, CantCreateContainer, Container] =
+    ZIO.acquireRelease(makeContainer(containerName))(killContainer).mapError(t => CantCreateContainer(Some(t.toString)))
 
-  def containerLayerScoped(containerName: String): ZLayer[DockerClient, Throwable, Container] =
+  def containerLayerScoped(containerName: String): ZLayer[DockerClient, CantCreateContainer, Container] =
     ZLayer.scoped(container(containerName))
 
-  def containerLayer(containerName: String): ZLayer[DockerClient & Scope, Throwable, Container] =
+  def containerLayer(containerName: String): ZLayer[DockerClient & Scope, CantCreateContainer, Container] =
     ZLayer.fromZIO(container(containerName))
 
-
-  def dockerClientContext(containerName: String): ZIO[Scope, Throwable, DockerClientContext] =
+  //The following import might make progress towards fixing the problem: IDK WHY
+//  import izumi.reflect.dottyreflection.ReflectionUtil.reflectiveUncheckedNonOverloadedSelectable
+  def dockerClientContext(containerName: String): ZIO[Scope, CantCreateClient | CantCreateContainer, DockerClientContext] =
       for {
         cl <- client
         cont <- container(containerName).provideSomeLayer(ZLayer.succeed(cl))
       } yield DockerClientContext(cl, cont)
 
-  def dockerClientContextScoped(containerName: String): ZLayer[Any, Throwable,  DockerClientContext] =
+  def dockerClientContextScoped(containerName: String): ZLayer[Any, CantCreateClient | CantCreateContainer,  DockerClientContext] =
     ZLayer.scoped(dockerClientContext(containerName))
 
   def doInContainer[R: Tag, E: Tag, A: Tag](containerName: String)
-                                           (program: ZIO[DockerClientContext & R, E, A]): ZIO[DockerClient & R, E | Throwable, A] =
+                                           (program: ZIO[DockerClientContext & R, E, A]): ZIO[DockerClient & R, E | DockerFailure, A] =
     ZIO.scoped {
       for {
         cl <- ZIO.service[DockerClient]
@@ -95,8 +108,8 @@ object DockerOps {
   //    }
 
   case class CopyArchiveToContainerParams(path: String = "/", tarStream: InputStream)
-  def copyArchiveToContainer(params: CopyArchiveToContainerParams): ZIO[DockerClientContext, Throwable, Unit] =
-    for {
+  def copyArchiveToContainer(params: CopyArchiveToContainerParams): ZIO[DockerClientContext, CantCopyToContainer, Unit] =
+    (for {
       context <- ZIO.service[DockerClientContext]
       _ <- ZIO.attempt {
         context.client.copyArchiveToContainerCmd(context.container.id)
@@ -104,16 +117,16 @@ object DockerOps {
           .withTarInputStream(params.tarStream)
           .exec()
       } //.catchAll(t => ZIO.logErrorCause("Exception when coping archive to container", Cause.fail(t)))
-    } yield ()
+    } yield ()).mapError(t => CantCopyToContainer(Some(t.toString)))
 
 
   case class ExecuteCommandResult(exitCode: Option[Long], stdOut: String, stdErr: String)
   case class ExecuteCommandParams(cmd: Seq[String], input: Option[InputStream] = None)
-  def executeCommandInContainer(params: ExecuteCommandParams): ZIO[DockerClientContext, Throwable, ExecuteCommandResult] =
-    for {
+  def executeCommandInContainer(params: ExecuteCommandParams): ZIO[DockerClientContext, CantExecuteCommand, ExecuteCommandResult] =
+    (for {
       context <- ZIO.service[DockerClientContext]
       res <- ZIO.attempt(executeCommandInContainer(context, params))
-    } yield res
+    } yield res).mapError(t => CantExecuteCommand(Some(t.toString)))
 
   //  .catchAll(t =>
   //    ZIO.logErrorCause("Exception when executing command in container client", Cause.fail(t))

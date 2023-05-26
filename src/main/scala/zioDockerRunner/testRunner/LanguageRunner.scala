@@ -1,6 +1,6 @@
 package zioDockerRunner.testRunner
 
-import zioDockerRunner.dockerIntegration.DockerOps.DockerClientContext
+import zioDockerRunner.dockerIntegration.DockerOps.{DockerClientContext, RunningContainerFailure}
 import zio.*
 import zioDockerRunner.testRunner.RunResult.{CorrectAnswer, NotTested, WrongAnswer}
 import RunVerificationResult.*
@@ -8,11 +8,11 @@ import RunVerificationResult.*
 trait LanguageRunner[L <: ProgrammingLanguage] {
   type CompilationSuccessL <: CompilationSuccess[L]
 
-  def compile(source: ProgramSource): ZIO[DockerClientContext, CompilationFailure, CompilationSuccessL]
+  def compile(source: ProgramSource): ZIO[DockerClientContext, RunningContainerFailure | CompilationFailure, CompilationSuccessL]
 
-  def runCompiled(compilationSuccess: CompilationSuccessL, input: String, maxTime: Long): ZIO[DockerClientContext, Nothing, RawRunResult]
+  def runCompiled(compilationSuccess: CompilationSuccessL, input: String, maxTime: Long): ZIO[DockerClientContext, RunningContainerFailure, RawRunResult]
 
-  def runSingleRun(compilationSuccess: CompilationSuccessL, maxTime: Long, s: SingleRun): ZIO[DockerClientContext, Nothing, UserRunResult] = {
+  def runSingleRun(compilationSuccess: CompilationSuccessL, maxTime: Long, s: SingleRun): ZIO[DockerClientContext, RunningContainerFailure, UserRunResult] = {
     for {
       res <- runCompiled(compilationSuccess, s.input, maxTime)
     } yield res match
@@ -23,7 +23,7 @@ trait LanguageRunner[L <: ProgrammingLanguage] {
           case RunVerificationWrongAnswer(message) => WrongAnswer(message)
   }
 
-  def runTestsInCompiled(crm: CompileAndRunMultiple, succ: CompilationSuccessL): ZIO[DockerClientContext, Nothing, MultipleRunsResultScore] = {
+  def runTestsInCompiled(crm: CompileAndRunMultiple, succ: CompilationSuccessL): ZIO[DockerClientContext, RunningContainerFailure, MultipleRunsResultScore] = {
     case class Acc(continue: Boolean = true, acc: Seq[UserRunResult] = Seq())
 
     ZIO.foldLeft(crm.runs)(Acc()) {
@@ -36,7 +36,7 @@ trait LanguageRunner[L <: ProgrammingLanguage] {
     }.map(_.acc)
   }
 
-  def compileAndRunMultiple(crm: CompileAndRunMultiple): ZIO[DockerClientContext, Nothing, CompileAndRunMultipleResult] = {
+  def compileAndRunMultiple(crm: CompileAndRunMultiple): ZIO[DockerClientContext, RunningContainerFailure, CompileAndRunMultipleResult] = {
     val success = for {
       compSuccess <- compile(crm.programCode)
       res <- runTestsInCompiled(crm, compSuccess)

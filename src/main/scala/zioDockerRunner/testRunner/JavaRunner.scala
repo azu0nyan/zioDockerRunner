@@ -1,7 +1,7 @@
 package zioDockerRunner.testRunner
 
-import zioDockerRunner.dockerIntegration.DockerOps.{CopyArchiveToContainerParams, DockerClientContext, ExecuteCommandParams}
-import CompileResult.{CompilationError, JavaCompilationSuccess, RemoteWorkerError}
+import zioDockerRunner.dockerIntegration.DockerOps.{CopyArchiveToContainerParams, DockerClientContext, ExecuteCommandParams, RunningContainerFailure}
+import CompileResult.{CompilationError, JavaCompilationSuccess}
 import RunResult.{RuntimeError, SuccessffulRun, TimeLimitExceeded, UnknownRunError}
 import zio.*
 import zio.Console.printLine
@@ -21,33 +21,36 @@ given JavaRunner: LanguageRunner [ProgrammingLanguage.Java.type] with {
     }
   }
 
-  def compile(source: ProgramSource): ZIO[DockerClientContext, CompilationFailure, JavaCompilationSuccess] =
+  def compile(source: ProgramSource): ZIO[DockerClientContext, RunningContainerFailure | CompilationFailure,  JavaCompilationSuccess] =
     for {
       className <- ZIO.fromOption(extractJavaMainClassName(source.src)).mapError(_ => CompilationError("No public class with main found"))
       tarStream <- ZIO.succeed(CompressOps.asTarStream(source.src, s"$className.java"))
-      _ <- DockerOps.copyArchiveToContainer(CopyArchiveToContainerParams("/", tarStream)).mapError(_ => RemoteWorkerError(Some("Cant copy archive to container")))
-      compileRes <- DockerOps.executeCommandInContainer(ExecuteCommandParams(Seq("javac", s"$className.java"), None)).mapError(_ => RemoteWorkerError(Some("Error while compiling with javac ")))
+      _ <- DockerOps.copyArchiveToContainer(CopyArchiveToContainerParams("/", tarStream))
+      compileRes <- DockerOps.executeCommandInContainer(ExecuteCommandParams(Seq("javac", s"$className.java"), None))
       r <-
         if (compileRes.exitCode.contains(1)) ZIO.fail(CompilationError(compileRes.stdOut))
         else ZIO.succeed(JavaCompilationSuccess(className))
     } yield r
 
-  def runCompiled(compilationSuccess: JavaCompilationSuccess, input: String, maxTime: Long): ZIO[DockerClientContext, Nothing, RawRunResult] = {
+  def runCompiled(compilationSuccess: JavaCompilationSuccess, input: String, maxTime: Long): ZIO[DockerClientContext, RunningContainerFailure, RawRunResult] = {
     val inputStream = new ByteArrayInputStream(input.getBytes("UTF-8"))
     val runCommand = Seq("java", compilationSuccess.className)
 
-    val run = (for {
-      startTime <- Clock.currentTime(TimeUnit.MILLISECONDS).tap(l => printLine(l))
+    val run: ZIO[DockerClientContext, RunningContainerFailure, RawRunResult] = (for {
+      startTime <- Clock.currentTime(TimeUnit.MILLISECONDS)
       runRes <- DockerOps.executeCommandInContainer(ExecuteCommandParams(runCommand, Some(inputStream))).disconnect
-      endTime <- Clock.currentTime(TimeUnit.MILLISECONDS).tap(l => printLine(l))
+      endTime <- Clock.currentTime(TimeUnit.MILLISECONDS)
     } yield if (runRes.exitCode.contains(1)) RuntimeError(runRes.stdOut) else SuccessffulRun(runRes.stdOut, endTime - startTime))
-      .catchAll(e => ZIO.succeed(UnknownRunError(e.toString)))
 
-    val timeout = for{
-      _ <- ZIO.sleep(maxTime.milliseconds)
-    } yield TimeLimitExceeded(maxTime)
 
-    for(winner <- run.race(timeout)) yield winner
+    run.timeoutTo[RawRunResult](TimeLimitExceeded(maxTime))(x => x)(maxTime.milliseconds)
+
+
+//    val timeout = for{
+//      _ <- ZIO.sleep(maxTime.milliseconds)
+//    } yield TimeLimitExceeded(maxTime)
+//
+//    for(winner <- run.race(timeout)) yield winner
 
   }
 
