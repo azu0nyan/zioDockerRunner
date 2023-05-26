@@ -4,7 +4,7 @@ import com.github.dockerjava.api
 import com.github.dockerjava.api.DockerClient
 import com.github.dockerjava.api.async.ResultCallbackTemplate
 import com.github.dockerjava.api.model.{Frame, StreamType}
-import com.github.dockerjava.core.DockerClientBuilder
+import com.github.dockerjava.core.{DefaultDockerClientConfig, DockerClientBuilder, DockerClientConfig}
 import com.github.dockerjava.netty.NettyDockerCmdExecFactory
 import zio.*
 import zioDockerRunner.dockerIntegration.DockerOps.DockerFailure.*
@@ -16,6 +16,7 @@ object DockerOps {
   sealed trait DockerFailure
   sealed trait RunningContainerFailure extends DockerFailure
   case object DockerFailure {
+    case object WorkQueueIsFull extends DockerFailure
     final case class CantCreateClient(errorMessage: Option[String] = None) extends DockerFailure
     final case class CantCreateContainer(errorMessage: Option[String] = None) extends DockerFailure
 
@@ -27,11 +28,11 @@ object DockerOps {
   case class Container(id: String)
   case class DockerClientContext(client: DockerClient, container: Container)
 
-  def buildClient: Task[DockerClient] = ZIO.attemptBlocking {
+  def buildClient(config: DockerClientConfig = DefaultDockerClientConfig.createDefaultConfigBuilder().build()): Task[DockerClient] = ZIO.attemptBlocking {
 
-    val res = DockerClientBuilder.getInstance
+    val res = DockerClientBuilder.getInstance(config)
       .withDockerCmdExecFactory(new NettyDockerCmdExecFactory()
-        .withConnectTimeout(30 * 1000)).build
+        .withConnectTimeout(30 * 1000)).build()
     println(s"Client open $res")
     res
   }
@@ -41,14 +42,14 @@ object DockerOps {
     c.close()
   }.catchAll(t => ZIO.logErrorCause("Exception when closing client", Cause.fail(t)))
 
-  def client: ZIO[Scope, CantCreateClient, DockerClient] =
-    ZIO.acquireRelease(buildClient)(closeClient).mapError(t => CantCreateClient(Some(t.toString)))
+  def client(config: DockerClientConfig = DefaultDockerClientConfig.createDefaultConfigBuilder().build()): ZIO[Scope, CantCreateClient, DockerClient] =
+    ZIO.acquireRelease(buildClient(config))(closeClient).mapError(t => CantCreateClient(Some(t.toString)))
 
-  def clientLayer: ZLayer[Scope, CantCreateClient, DockerClient] =
-    ZLayer.fromZIO(client)
+  def clientLayer(config: DockerClientConfig = DefaultDockerClientConfig.createDefaultConfigBuilder().build()): ZLayer[Scope, CantCreateClient, DockerClient] =
+    ZLayer.fromZIO(client(config))
 
-  def clientLayerScooped: ZLayer[Any, CantCreateClient, DockerClient] =
-    ZLayer.scoped(client)
+  def clientLayerScooped(config: DockerClientConfig = DefaultDockerClientConfig.createDefaultConfigBuilder().build()): ZLayer[Any, CantCreateClient, DockerClient] =
+    ZLayer.scoped(client(config))
 
   def makeContainer(containerName: String): ZIO[DockerClient, Throwable, Container] =
     for {
@@ -84,9 +85,9 @@ object DockerOps {
 
   //The following import might make progress towards fixing the problem: IDK WHY
 //  import izumi.reflect.dottyreflection.ReflectionUtil.reflectiveUncheckedNonOverloadedSelectable
-  def dockerClientContext(containerName: String): ZIO[Scope, CantCreateClient | CantCreateContainer, DockerClientContext] =
+  def dockerClientContext(containerName: String, config: DockerClientConfig = DefaultDockerClientConfig.createDefaultConfigBuilder().build()): ZIO[Scope, CantCreateClient | CantCreateContainer, DockerClientContext] =
       for {
-        cl <- client
+        cl <- client(config)
         cont <- container(containerName).provideSomeLayer(ZLayer.succeed(cl))
       } yield DockerClientContext(cl, cont)
 

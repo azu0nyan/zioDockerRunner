@@ -1,6 +1,7 @@
 package zioDockerRunner.dockerIntegration
 
 import DockerOps.{CopyArchiveToContainerParams, ExecuteCommandParams, ExecuteCommandResult}
+import com.github.dockerjava.core.{DefaultDockerClientConfig, DockerClientConfig}
 import zio.ZLayer
 import zio.test.*
 import zio.test.Assertion.*
@@ -11,6 +12,7 @@ import scala.io.Source
 
 object DockerOpsTests extends ZIOSpecDefault {
   val testContainerName = "cont:0.1"
+  val config: DockerClientConfig = DefaultDockerClientConfig.createDefaultConfigBuilder().build()
 
 
   val t1 = test("Compiling java program without Runner") {
@@ -29,7 +31,7 @@ object DockerOpsTests extends ZIOSpecDefault {
       res3 <- DockerOps.executeCommandInContainer(ExecuteCommandParams(failedCommand, None))
     } yield (res, res2, res3)
 
-    val res = for (r <- DockerOps.doInContainer(testContainerName)(toRunInContainer).provideLayer(DockerOps.clientLayerScooped)) yield r
+    val res = for (r <- DockerOps.doInContainer(testContainerName)(toRunInContainer).provideLayer(DockerOps.clientLayerScooped(config))) yield r
 
     assertZIO(res)(
       hasField("firstResult", (x: (ExecuteCommandResult, ExecuteCommandResult, ExecuteCommandResult)) => x._1, equalTo(ExecuteCommandResult(Some(0), "", ""))) &&
