@@ -11,7 +11,10 @@ object Runner {
     compileAndRunMultiple.language match
       case Java => JavaRunner.compileAndRunMultiple(compileAndRunMultiple)
       case Cpp => CppRunner.compileAndRunMultiple(compileAndRunMultiple)
-      case _ => ???
+      case _ => {
+        println(s"LOL")
+        ???
+      }
     //      case Haskell => compileAndRunMultipleUsing[Haskell.type](compileAndRunMultiple)
     //      case Scala => compileAndRunMultipleUsing[Scala.type](compileAndRunMultiple)
     //      case Kojo => compileAndRunMultipleUsing[Kojo.type](compileAndRunMultiple)

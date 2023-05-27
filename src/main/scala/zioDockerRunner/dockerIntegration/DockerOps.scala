@@ -16,6 +16,7 @@ object DockerOps {
   sealed trait DockerFailure
   sealed trait RunningContainerFailure extends DockerFailure
   case object DockerFailure {
+    case object UnknownDockerFailure extends DockerFailure
     case object WorkQueueIsFull extends DockerFailure
     final case class CantCreateClient(errorMessage: Option[String] = None) extends DockerFailure
     final case class CantCreateContainer(errorMessage: Option[String] = None) extends DockerFailure
@@ -91,8 +92,8 @@ object DockerOps {
         cont <- container(containerName).provideSomeLayer(ZLayer.succeed(cl))
       } yield DockerClientContext(cl, cont)
 
-  def dockerClientContextScoped(containerName: String): ZLayer[Any, CantCreateClient | CantCreateContainer,  DockerClientContext] =
-    ZLayer.scoped(dockerClientContext(containerName))
+  def dockerClientContextScoped(containerName: String, config: DockerClientConfig = DefaultDockerClientConfig.createDefaultConfigBuilder().build()): ZLayer[Any, CantCreateClient | CantCreateContainer,  DockerClientContext] =
+    ZLayer.scoped(dockerClientContext(containerName, config))
 
   def doInContainer[R: Tag, E: Tag, A: Tag](containerName: String)
                                            (program: ZIO[DockerClientContext & R, E, A]): ZIO[DockerClient & R, E | DockerFailure, A] =

@@ -38,7 +38,9 @@ trait LanguageRunner[L <: ProgrammingLanguage] {
 
   def compileAndRunMultiple(crm: CompileAndRunMultiple): ZIO[DockerClientContext, RunningContainerFailure, CompileAndRunMultipleResult] = {
     val success = for {
+      _ <- ZIO.logInfo(s"Compiling..")
       compSuccess <- compile(crm.programCode)
+      _ <- ZIO.logInfo(s"Compiled running tests..")
       res <- runTestsInCompiled(crm, compSuccess)
     } yield res
 
